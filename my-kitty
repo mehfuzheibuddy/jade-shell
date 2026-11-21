@@ -1,0 +1,226 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ---------- Theme definitions ----------
+declare -A THEMES=( [github-dark]=1 [dracula]=2 [gruvbox-dark]=3 [tokyo-night]=4 [catppuccin-mocha]=5 [osaka]=6 [jade]=7 [osaka-jade]=8 )
+
+usage() { echo "Usage: ./my_shell.sh [--theme github-dark|dracula|gruvbox-dark|tokyo-night|catppuccin-mocha|osaka|jade|osaka-jade]"; }
+
+THEME="${THEME:-}"
+if [[ $# -gt 0 ]]; then
+  case "$1" in
+    --theme) THEME="${2:-}"; [[ -z "$THEME" || -z "${THEMES[$THEME]:-}" ]] && { usage; exit 1; } ;;
+    *) usage; exit 1 ;;
+  esac
+fi
+if [[ -z "$THEME" ]]; then
+  echo "Choose a theme:"
+  echo "  1) github-dark   2) dracula   3) gruvbox-dark   4) tokyo-night   5) catppuccin-mocha   6) osaka   7) jade   8) osaka-jade"
+  read -r REPLY
+  case "$REPLY" in
+    1) THEME="github-dark" ;; 2) THEME="dracula" ;;
+    3) THEME="gruvbox-dark" ;; 4) THEME="tokyo-night" ;;
+    5) THEME="catppuccin-mocha" ;; 6) THEME="osaka" ;; 7) THEME="jade" ;;
+    8) THEME="osaka-jade" ;;
+    *) echo "Invalid choice."; exit 1 ;;
+  esac
+fi
+echo "==> Using theme: $THEME"
+
+# Per-theme values: fg bg cursor url selfg selbg c0..c15 + starship colors
+theme_palette() {
+  case "$THEME" in
+    github-dark)
+      FGC=#e6edf3 BGC=#0d1117 CUR=#58a6ff URL=#58a6ff SELBG=#58a6ff SELF=#0d1117
+      C0=#161b22 C8=#6e7681 C1=#ff7b72 C9=#ffa198 C2=#7ee787 C10=#b1f7b7
+      C3=#ffa657 C11=#ffc8a3 C4=#58a6ff C12=#a5c8ff C5=#d2a8ff C13=#d9b8ff
+      C6=#79c0ff C14=#b7e2ff C7=#e6edf3 C15=#f0f6fc
+      SDIR=#58a6ff SOK=#7ee787 SERR=#f85149 SBR=#d2a8ff SGI=#ff7b72 STIME=#ffa657 ;;
+    dracula)
+      FGC=#f8f8f2 BGC=#282a36 CUR=#ff79c6 URL=#8be9fd SELBG=#44475a SELF=#f8f8f2
+      C0=#21222c C8=#6272a4 C1=#ff5555 C9=#ff6e6e C2=#50fa7b C10=#69ff94
+      C3=#f1fa8c C11=#ffffa5 C4=#bd93f9 C12=#caa9fa C5=#ff79c6 C13=#ff92df
+      C6=#8be9fd C14=#9ffff6 C7=#f8f8f2 C15=#ffffff
+      SDIR=#bd93f9 SOK=#50fa7b SERR=#ff5555 SBR=#ff79c6 SGI=#ff5555 STIME=#f1fa8c ;;
+    gruvbox-dark)
+      FGC=#ebdbb2 BGC=#282828 CUR=#fabd2f URL=#83a598 SELBG=#458588 SELF=#ebdbb2
+      C0=#282828 C8=#928374 C1=#cc241d C9=#fb4934 C2=#98971a C10=#b8bb26
+      C3=#d79921 C11=#fabd2f C4=#458588 C12=#83a598 C5=#b16286 C13=#d3869b
+      C6=#689d6a C14=#8ec07c C7=#a89984 C15=#fbf1c7
+      SDIR=#83a598 SOK=#98971a SERR=#cc241d SBR=#d3869b SGI=#fb4934 STIME=#fabd2f ;;
+    tokyo-night)
+      FGC=#c0caf5 BGC=#1a1b26 CUR=#c0caf5 URL=#7dcfff SELBG=#33467c SELF=#c0caf5
+      C0=#15161e C8=#414868 C1=#f7768e C9=#ff7a93 C2=#9ece6a C10=#b9f7c7
+      C3=#e0af68 C11=#ffc8a3 C4=#7aa2f7 C12=#a5c8ff C5=#bb9af7 C13=#d9b8ff
+      C6=#89ddff C14=#b7e2ff C7=#c0caf5 C15=#f0f6fc
+      SDIR=#7aa2f7 SOK=#9ece6a SERR=#f7768e SBR=#bb9af7 SGI=#f7768e STIME=#e0af68 ;;
+    catppuccin-mocha)
+      FGC=#cdd6f4 BGC=#1e1e2e CUR=#f5e0dc URL=#89b4fa SELBG=#585b70 SELF=#cdd6f4
+      C0=#45475a C8=#585b70 C1=#f38ba8 C9=#f38ba8 C2=#a6e3a1 C10=#a6e3a1
+      C3=#f9e2af C11=#f9e2af C4=#89b4fa C12=#89b4fa C5=#f5c2e7 C13=#f5c2e7
+        C6=#94e2d5 C14=#94e2d5 C7=#bac2de C15=#a6adc8
+        SDIR=#89b4fa SOK=#a6e3a1 SERR=#f38ba8 SBR=#f5c2e7 SGI=#fab387 STIME=#f9e2af ;;
+      osaka)  # Tokyo Night Osaka
+        FGC=#c0caf5 BGC=#1a233b CUR=#c0caf5 URL=#7dcfff SELBG=#28345a SELF=#c0caf5
+        C0=#16161e C8=#414868 C1=#f7768e C9=#ff7a93 C2=#9ece6a C10=#b9f7c7
+        C3=#e0af68 C11=#ffc8a3 C4=#7aa2f7 C12=#a5c8ff C5=#bb9af7 C13=#d9b8ff
+        C6=#89ddff C14=#b7e2ff C7=#c0caf5 C15=#f0f6fc
+        SDIR=#7aa2f7 SOK=#9ece6a SERR=#f7768e SBR=#bb9af7 SGI=#f7768e STIME=#e0af68 ;;
+      jade)  # jade-inspired green palette
+        FGC=#d6e5d0 BGC=#1b1f1a CUR=#a7d0a0 URL=#8fbf7f SELBG=#374d33 SELF=#1b1f1a
+        C0=#222c20 C8=#6b7d66 C1=#cf6a6a C9=#ff8f8f C2=#a7d0a0 C10=#c2e8bc
+        C3=#d9b36c C11=#f0cd8a C4=#7ba8c9 C12=#a5cee8 C5=#b48ead C13=#d0b3e0
+        C6=#8fbf7f C14=#b3e0a7 C7=#d6e5d0 C15=#f2f7ef
+        SDIR=#7ba8c9 SOK=#a7d0a0 SERR=#cf6a6a SBR=#b48ead SGI=#cf6a6a STIME=#d9b36c ;;
+      osaka-jade)  # Osaka Jade (craftzdog / Omarchy palette)
+        FGC=#c1c497 BGC=#111c18 CUR=#d7c995 URL=#2dd5b7 SELBG=#23372b SELF=#f6f5dd
+        C0=#23372b C8=#53685b C1=#ff5345 C9=#db9f9c C2=#549e6a C10=#63b07a
+        C3=#459451 C11=#e5c736 C4=#509475 C12=#acd4cf C5=#d2689c C13=#75bbb3
+        C6=#2dd5b7 C14=#8cd3cb C7=#f6f5dd C15=#9eebb3
+        SDIR=#509475 SOK=#549e6a SERR=#ff5345 SBR=#d2689c SGI=#ff5345 STIME=#e5c736 ;;
+    esac
+}
+theme_palette
+
+hex2rgb() { # #rrggbb -> r,g,b (starship style strings)
+  local h="${1#\#}" r g b
+  r=$((16#${h:0:2})); g=$((16#${h:2:2})); b=$((16#${h:4:2}))
+  echo "$r,$g,$b"
+}
+
+echo "==> Step 1: Installing kitty terminal"
+if ! command -v kitty >/dev/null 2>&1 && [ ! -d /Applications/kitty.app ]; then
+  brew install --cask kitty
+else
+  echo "kitty already installed, skipping."
+fi
+
+echo "==> Step 2: Installing Starship prompt"
+if ! command -v starship >/dev/null 2>&1; then
+  curl -sS https://starship.rs/install.sh | sh -s -- --yes
+else
+  echo "Starship already installed, skipping."
+fi
+
+echo "==> Step 3: Installing Hack Nerd Font"
+FONT_DIR="$HOME/Library/Fonts"
+if ! ls "$FONT_DIR"/HackNerd* >/dev/null 2>&1; then
+  curl -sL -o /tmp/hack.zip \
+    "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/Hack.zip"
+  unzip -o /tmp/hack.zip -d "$FONT_DIR" -x "*Windows*" "*LICENSE*" >/dev/null
+  rm -f /tmp/hack.zip
+else
+  echo "Hack Nerd Font already installed, skipping."
+fi
+
+echo "==> Step 4: Writing kitty config ($THEME)"
+KITTY_DIR="$HOME/.config/kitty"
+mkdir -p "$KITTY_DIR"
+
+cat > "$KITTY_DIR/kitty.conf" <<CONF
+# kitty configuration — $THEME
+font_family      Hack Nerd Font
+bold_font         auto
+italic_font       auto
+bold_italic_font  auto
+font_size         13.0
+
+window_padding_width    12
+cursor_shape            beam
+cursor_beam_unfocused   hollow
+scrollback_lines        10000
+enable_audio_bell       no
+copy_on_select          yes
+confirm_os_window_close 0
+# Keep the native macOS titlebar so the window has a proper drag handle
+hide_window_decorations no
+macos_titlebar_color    background
+macos_show_window_title_in window
+
+include current-theme.conf
+CONF
+
+cat > "$KITTY_DIR/current-theme.conf" <<THEMECONF
+# $THEME theme for kitty
+foreground           $FGC
+background           $BGC
+selection_foreground $SELF
+selection_background $SELBG
+cursor               $CUR
+url_color            $URL
+
+color0  $C0
+color8  $C8
+color1  $C1
+color9  $C9
+color2  $C2
+color10 $C10
+color3  $C3
+color11 $C11
+color4  $C4
+color12 $C12
+color5  $C5
+color13 $C13
+color6  $C6
+color14 $C14
+color7  $C7
+color15 $C15
+THEMECONF
+
+echo "==> Step 5: Writing Starship config ($THEME)"
+mkdir -p "$HOME/.config"
+cat > "$HOME/.config/starship.toml" <<TOML
+# $THEME Starship theme
+format = """
+\$directory\$git_branch\$git_status\$nodejs\$python\$rust\$golang\$cmd_duration
+\$character"""
+
+[character]
+success_symbol = "[❯](bold $(hex2rgb "$SOK"))"
+error_symbol   = "[❯](bold $(hex2rgb "$SERR"))"
+
+[directory]
+style = "bold $(hex2rgb "$SDIR")"
+read_only = " 🔒"
+truncation_length = 3
+
+[git_branch]
+symbol = "🌱 "
+style = "bold $(hex2rgb "$SBR")"
+
+[git_status]
+style = "bold $(hex2rgb "$SGI")"
+
+[nodejs]
+symbol = "⬢ "
+style = "$(hex2rgb "$SOK")"
+
+[python]
+symbol = "🐍 "
+style = "bold $(hex2rgb "$SGI")"
+
+[rust]
+symbol = "🦀 "
+style = "bold $(hex2rgb "$STIME")"
+
+[golang]
+symbol = "🐹 "
+style = "bold $(hex2rgb "$SDIR")"
+
+[cmd_duration]
+min_time = 2000
+format = "took [\$duration](bold $(hex2rgb "$STIME")) "
+
+[line_break]
+disabled = true
+TOML
+
+echo "==> Step 6: Hooking Starship into zsh"
+SHELL_RC="$HOME/.zshrc"
+touch "$SHELL_RC"
+if ! grep -q 'starship init' "$SHELL_RC"; then
+  printf '\n# Starship prompt\neval "$(starship init zsh)"\n' >> "$SHELL_RC"
+fi
+
+echo "==> Done ($THEME)! Configured: kitty, Hack Nerd Font, Starship, zsh hook."
+echo "Launch with: open -a kitty   | Reload config in kitty: ctrl+shift+f5"
